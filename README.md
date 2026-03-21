@@ -24,5 +24,14 @@ Paper-validation scaffold stage.
 ## Run
 ```bash
 cd /home/openclawd/.openclaw/workspace/forge
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 python3 main.py --config config.example.yaml
 ```
+
+## Runtime artifacts
+- `logs/` — per-session runtime logs
+- `trades/` — per-session JSONL trade ledger
+- `summary/` — per-session summaries
+- `summary/latest-summary.json` — easiest file to inspect mid-run
