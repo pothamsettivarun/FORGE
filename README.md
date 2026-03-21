@@ -3,7 +3,7 @@
 Forge is a Polymarket-native rebuild of the legacy ClawdFather strategy.
 
 ## Current status
-Scaffold stage.
+Paper-validation scaffold stage.
 
 ## Included docs
 - `CLAWDFATHER_STRATEGY_MEMO.md`
