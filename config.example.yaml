@@ -1,0 +1,22 @@
+market:
+  asset: BTC
+  symbol: BTCUSDT
+  horizon_minutes: 5
+signal:
+  min_confidence: 0.42
+  max_volatility: 0.18
+  min_strength: 0.11
+  windows:
+    r1: 1
+    r3: 3
+    r5: 5
+execution:
+  paper_trading: true
+  position_size_usd: 10.0
+  edge_threshold: 0.03
+  scan_interval_sec: 5
+risk:
+  max_gross_exposure_usd: 50.0
+  max_daily_drawdown_usd: 25.0
+logging:
+  level: INFO

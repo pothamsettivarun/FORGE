@@ -1,0 +1,1 @@
+"""Signal logic for Forge."""
