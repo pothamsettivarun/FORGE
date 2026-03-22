@@ -132,6 +132,11 @@ class ForgeBot:
             logging.info("SCAN | slug=%s signal=%s decision=SKIP", slug, signal)
             return
 
+        if float(signal.get("confidence", 0.0) or 0.0) < self.cfg["signal"]["min_confidence"]:
+            self.inc_skip("low_confidence")
+            logging.info("SCAN | slug=%s signal=%s decision=SKIP reason=low_confidence", slug, signal)
+            return
+
         token_id = yes_id if signal["side"] == "yes" else no_id
         market_price = self.poly.midpoint(token_id)
         if market_price is None:

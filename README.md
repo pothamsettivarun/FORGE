@@ -5,6 +5,12 @@ Forge is a Polymarket-native rebuild of the legacy ClawdFather strategy.
 ## Current status
 Paper-validation scaffold stage.
 
+Current research-mode protections include:
+- low/high tail-price entry blocks
+- side-specific max entry caps
+- explicit confidence gate
+- explicit edge threshold
+
 ## Included docs
 - `CLAWDFATHER_STRATEGY_MEMO.md`
 - `FORGE_SPEC.md`

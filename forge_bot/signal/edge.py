@@ -6,10 +6,12 @@ def fair_probability_from_signal(signal: dict) -> tuple[float | None, str]:
     conf = float(signal.get("confidence", 0.0) or 0.0)
     if side not in ("yes", "no"):
         return None, "no_side"
+    if conf < 0.42:
+        return None, "low_confidence"
 
-    # Confidence-linked fair probability independent of current market price.
-    # This avoids circularly importing the market into the signal estimate.
-    fair = min(0.90, max(0.52, 0.50 + 0.30 * conf))
+    # More conservative mapping: confidence nudges fair probability,
+    # but does not create absurdly high conviction from modest momentum.
+    fair = min(0.72, max(0.54, 0.50 + 0.18 * conf))
     return fair, "ok"
 
 
