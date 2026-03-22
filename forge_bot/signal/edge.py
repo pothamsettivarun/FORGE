@@ -1,23 +1,19 @@
 from __future__ import annotations
 
 
-def fair_probability_from_signal(signal: dict, market_price: float) -> tuple[float | None, str]:
+def fair_probability_from_signal(signal: dict) -> tuple[float | None, str]:
     side = signal.get("side")
     conf = float(signal.get("confidence", 0.0) or 0.0)
     if side not in ("yes", "no"):
         return None, "no_side"
 
-    edge = min(0.20, 0.02 + 0.25 * conf)
-    if side == "yes":
-        fair = min(0.99, float(market_price) + edge)
-    else:
-        fair = min(0.99, (1.0 - float(market_price)) + edge)
+    # Confidence-linked fair probability independent of current market price.
+    # This avoids circularly importing the market into the signal estimate.
+    fair = min(0.90, max(0.52, 0.50 + 0.30 * conf))
     return fair, "ok"
 
 
 def has_tradeable_edge(side: str, market_price: float, fair_prob: float, threshold: float) -> tuple[bool, float]:
-    if side == "yes":
-        edge = fair_prob - market_price
-    else:
-        edge = fair_prob - (1.0 - market_price)
+    implied = market_price if side == "yes" else (1.0 - market_price)
+    edge = fair_prob - implied
     return edge >= threshold, edge

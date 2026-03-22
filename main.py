@@ -46,6 +46,7 @@ class ForgeBot:
         self.trade_file = os.path.join(self.trades_dir, f"trades-{sid}.jsonl")
         self.summary_file = os.path.join(self.summary_dir, f"summary-{sid}.json")
         self.latest_summary = os.path.join(self.summary_dir, "latest-summary.json")
+        self.halt_logged = False
 
     def inc_skip(self, reason: str):
         self.stats.skips += 1
@@ -138,7 +139,7 @@ class ForgeBot:
             logging.info("SCAN | slug=%s signal=%s decision=SKIP reason=no_midpoint", slug, signal)
             return
 
-        fair_prob, fair_reason = fair_probability_from_signal(signal, market_price)
+        fair_prob, fair_reason = fair_probability_from_signal(signal)
         if fair_prob is None:
             self.inc_skip(fair_reason)
             logging.info("SCAN | slug=%s signal=%s decision=SKIP reason=%s", slug, signal, fair_reason)
@@ -159,8 +160,12 @@ class ForgeBot:
         dd_ok, dd_reason = within_daily_drawdown(self.stats.total_pnl, self.cfg["risk"]["max_daily_drawdown_usd"])
         if not dd_ok:
             self.inc_skip(dd_reason)
-            logging.info("SCAN | slug=%s decision=SKIP reason=%s", slug, dd_reason)
+            if not self.halt_logged:
+                logging.info("SCAN | slug=%s decision=SKIP reason=%s", slug, dd_reason)
+                self.halt_logged = True
             return
+        else:
+            self.halt_logged = False
 
         if self.position and self.position["slug"] == slug:
             self.inc_skip("position_already_open")
@@ -178,6 +183,7 @@ class ForgeBot:
             "open_spot": closes[-1],
         }
         self.stats.entries += 1
+        implied_prob = market_price if order.side == "yes" else (1.0 - market_price)
         append_jsonl(self.trade_file, {
             "action": "OPEN",
             "slug": slug,
@@ -186,11 +192,12 @@ class ForgeBot:
             "shares": round(order.shares, 4),
             "notional_usd": order.notional_usd,
             "signal": signal,
+            "implied_prob": round(implied_prob, 4),
             "fair_prob": fair_prob,
             "edge": round(edge, 4),
             "ts": int(time.time()),
         })
-        logging.info("SCAN | slug=%s side=%s market=%.3f fair=%.3f edge=%.3f decision=ENTER", slug, order.side, market_price, fair_prob, edge)
+        logging.info("SCAN | slug=%s side=%s market=%.3f implied=%.3f fair=%.3f edge=%.3f decision=ENTER", slug, order.side, market_price, implied_prob, fair_prob, edge)
         self.persist_summary()
 
     def run(self):
