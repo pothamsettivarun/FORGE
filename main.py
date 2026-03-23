@@ -17,6 +17,9 @@ from forge_bot.signal.edge import fair_probability_from_signal, has_tradeable_ed
 from forge_bot.signal.momentum import build_momentum_signal
 
 
+FORGE_BUILD = "patch3"
+
+
 @dataclass
 class Stats:
     markets_seen: int = 0
