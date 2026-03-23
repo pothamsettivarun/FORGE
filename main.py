@@ -246,6 +246,30 @@ def main():
     ensure_dir(os.path.join(base_dir, "summary"))
     sid = session_id()
     log_file = setup_logging(base_dir, sid, cfg["logging"]["level"])
+    logging.info("SESSION | id=%s log=%s build=%s", sid, log_file, FORGE_BUILD)
+    logging.info(
+        "CONFIG | edge_threshold=%.3f min_conf=%.2f low_block=%.2f high_block=%.2f max_yes=%.2f max_no=%.2f dd=%.2f",
+        cfg["execution"]["edge_threshold"],
+        cfg["signal"]["min_confidence"],
+        cfg["execution"]["extreme_price_block_low"],
+        cfg["execution"]["extreme_price_block_high"],
+        cfg["execution"]["max_entry_price_yes"],
+        cfg["execution"]["max_entry_price_no"],
+        cfg["risk"]["max_daily_drawdown_usd"],
+    )
+    ForgeBot(cfg, base_dir, sid).run()
+
+
+if __name__ == "__main__":
+    main()
+
+    cfg = load_config(args.config)
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    ensure_dir(os.path.join(base_dir, "logs"))
+    ensure_dir(os.path.join(base_dir, "trades"))
+    ensure_dir(os.path.join(base_dir, "summary"))
+    sid = session_id()
+    log_file = setup_logging(base_dir, sid, cfg["logging"]["level"])
     logging.info("SESSION | id=%s log=%s", sid, log_file)
     ForgeBot(cfg, base_dir, sid).run()
 
