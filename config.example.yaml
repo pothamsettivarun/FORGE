@@ -13,11 +13,11 @@ signal:
 execution:
   paper_trading: true
   position_size_usd: 10.0
-  edge_threshold: 0.05
+  edge_threshold: 0.07
   extreme_price_block_low: 0.08
   extreme_price_block_high: 0.92
-  max_entry_price_yes: 0.75
-  max_entry_price_no: 0.75
+  max_entry_price_yes: 0.65
+  max_entry_price_no: 0.60
   scan_interval_sec: 5
 risk:
   max_gross_exposure_usd: 50.0

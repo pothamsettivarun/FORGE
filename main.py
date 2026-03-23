@@ -17,7 +17,7 @@ from forge_bot.signal.edge import fair_probability_from_signal, has_tradeable_ed
 from forge_bot.signal.momentum import build_momentum_signal
 
 
-FORGE_BUILD = "patch3"
+FORGE_BUILD = "patch4"
 
 
 @dataclass
@@ -31,6 +31,10 @@ class Stats:
     total_pnl: float = 0.0
     current_slug: str | None = None
     skip_reasons: dict = field(default_factory=dict)
+    side_stats: dict = field(default_factory=lambda: {
+        "yes": {"entries": 0, "wins": 0, "losses": 0, "pnl": 0.0},
+        "no": {"entries": 0, "wins": 0, "losses": 0, "pnl": 0.0},
+    })
 
 
 class ForgeBot:
@@ -68,6 +72,7 @@ class ForgeBot:
             "total_pnl": round(self.stats.total_pnl, 4),
             "current_slug": self.stats.current_slug,
             "skip_reasons": self.stats.skip_reasons,
+            "side_stats": self.stats.side_stats,
         }
         write_json(self.summary_file, payload)
         write_json(self.latest_summary, payload)
@@ -85,10 +90,13 @@ class ForgeBot:
         pnl = pnl_per_share * self.position["shares"]
         self.stats.resolutions += 1
         self.stats.total_pnl += pnl
+        self.stats.side_stats[self.position["side"]]["pnl"] += pnl
         if won:
             self.stats.wins += 1
+            self.stats.side_stats[self.position["side"]]["wins"] += 1
         else:
             self.stats.losses += 1
+            self.stats.side_stats[self.position["side"]]["losses"] += 1
         append_jsonl(self.trade_file, {
             "action": "CLOSE",
             "slug": self.position["slug"],
@@ -147,6 +155,23 @@ class ForgeBot:
             logging.info("SCAN | slug=%s signal=%s decision=SKIP reason=no_midpoint", slug, signal)
             return
 
+        if market_price <= self.cfg["execution"]["extreme_price_block_low"]:
+            self.inc_skip("extreme_price_low")
+            logging.info("SCAN | slug=%s side=%s market=%.3f decision=SKIP reason=extreme_price_low", slug, signal["side"], market_price)
+            return
+        if market_price >= self.cfg["execution"]["extreme_price_block_high"]:
+            self.inc_skip("extreme_price_high")
+            logging.info("SCAN | slug=%s side=%s market=%.3f decision=SKIP reason=extreme_price_high", slug, signal["side"], market_price)
+            return
+        if signal["side"] == "yes" and market_price >= self.cfg["execution"]["max_entry_price_yes"]:
+            self.inc_skip("price_above_cap_yes")
+            logging.info("SCAN | slug=%s side=yes market=%.3f decision=SKIP reason=price_above_cap_yes", slug, market_price)
+            return
+        if signal["side"] == "no" and market_price >= self.cfg["execution"]["max_entry_price_no"]:
+            self.inc_skip("price_above_cap_no")
+            logging.info("SCAN | slug=%s side=no market=%.3f decision=SKIP reason=price_above_cap_no", slug, market_price)
+            return
+
         fair_prob, fair_reason = fair_probability_from_signal(signal)
         if fair_prob is None:
             self.inc_skip(fair_reason)
@@ -191,6 +216,7 @@ class ForgeBot:
             "open_spot": closes[-1],
         }
         self.stats.entries += 1
+        self.stats.side_stats[order.side]["entries"] += 1
         implied_prob = market_price if order.side == "yes" else (1.0 - market_price)
         append_jsonl(self.trade_file, {
             "action": "OPEN",
@@ -260,20 +286,6 @@ def main():
         cfg["execution"]["max_entry_price_no"],
         cfg["risk"]["max_daily_drawdown_usd"],
     )
-    ForgeBot(cfg, base_dir, sid).run()
-
-
-if __name__ == "__main__":
-    main()
-
-    cfg = load_config(args.config)
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    ensure_dir(os.path.join(base_dir, "logs"))
-    ensure_dir(os.path.join(base_dir, "trades"))
-    ensure_dir(os.path.join(base_dir, "summary"))
-    sid = session_id()
-    log_file = setup_logging(base_dir, sid, cfg["logging"]["level"])
-    logging.info("SESSION | id=%s log=%s", sid, log_file)
     ForgeBot(cfg, base_dir, sid).run()
 
 
