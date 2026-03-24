@@ -14,6 +14,7 @@ from core.barrier_fw import run_barrier_fw
 from core.stopping import should_execute
 from core.execution import ExecutionAdapter, IdempotencyStore, reconcile_fill
 from risk.limits import RiskConfig, risk_check
+from core.compat import get_snapshot as native_get_snapshot, fetch_markets as native_fetch_markets, fetch_context as native_fetch_context
 
 SIM_START_BAL = 10000.0
 MAX_TRADE = 100.0
@@ -43,7 +44,7 @@ RISK_CFG = RiskConfig(
     max_daily_drawdown=-500.0,
 )
 
-API = "https://api.simmer.markets/api/sdk"
+API = "native-polymarket-shim"
 BINANCE_KLINES = "https://api.binance.com/api/v3/klines?symbol={symbol}&interval=1m&limit=30"
 ASSET_MARKETS = [
     {"name": "BTC", "query": "Bitcoin Up or Down", "symbol": "BTCUSDT"},
@@ -107,29 +108,7 @@ def http_json(url, method="GET", headers=None, body=None, timeout=12):
 
 
 def read_key():
-    # Priority: explicit env var -> ~/.openclaw/.env -> ~/.config/simmer/credentials.json
-    v = os.getenv("SIMMER_API_KEY")
-    if v:
-        return v.strip()
-
-    env = "/home/openclawd/.openclaw/.env"
-    if os.path.exists(env):
-        for line in open(env):
-            if line.startswith("SIMMER_API_KEY="):
-                return line.strip().split("=", 1)[1]
-
-    creds = "/home/openclawd/.config/simmer/credentials.json"
-    if os.path.exists(creds):
-        try:
-            with open(creds, "r") as f:
-                data = json.load(f)
-            k = (data or {}).get("api_key")
-            if k:
-                return str(k).strip()
-        except Exception:
-            pass
-
-    return None
+    return "native-paper"
 
 
 def parse_iso(s):
@@ -221,32 +200,8 @@ def reset_day_if_needed(state, equity):
 
 
 def get_snapshot(key):
-    h = {"Authorization": f"Bearer {key}"}
-
-    t0 = time.time()
-    me = http_json(f"{API}/agents/me", headers=h)
-    t_me_ms = int((time.time() - t0) * 1000)
-
-    t1 = time.time()
-    pos = http_json(f"{API}/positions", headers=h)
-    t_pos_ms = int((time.time() - t1) * 1000)
-
-    balance = float(me.get("balance", 0.0) or 0.0)
-    positions = pos.get("positions", []) or []
-    positions_value = float(pos.get("total_value", 0.0) or 0.0)
-    equity = balance + positions_value
-
-    return {
-        "headers": h,
-        "me": me,
-        "pos": pos,
-        "balance": balance,
-        "positions": positions,
-        "positions_value": positions_value,
-        "equity": equity,
-        "t_me_ms": t_me_ms,
-        "t_pos_ms": t_pos_ms,
-    }
+    _ = key
+    return native_get_snapshot()
 
 
 def detect_asset(question: str):
@@ -592,7 +547,8 @@ def projection_stop_decision(signal, price, risk_ok=True):
 
 def build_execution_adapter():
     def submit_fn(headers, body, timeout_sec):
-        return http_json(f"{API}/trade", method="POST", headers=headers, body=body, timeout=timeout_sec)
+        # Native port stays paper-only at this stage; preserve adapter contract.
+        return {"success": True, "order_id": body.get("client_order_id"), "filled_amount": float(body.get("amount", 0.0)), "price": body.get("price", 0.0)}
 
     return ExecutionAdapter(submit_fn=submit_fn, store=IdempotencyStore())
 
@@ -622,19 +578,7 @@ def run_cycle(state, exec_adapter):
         raise SystemExit(0)
 
     t_mk0 = time.time()
-    mk = []
-    seen = set()
-    for am in ASSET_MARKETS:
-        q = am["query"].replace(" ", "%20")
-        rows = http_json(
-            f"{API}/markets?q={q}&status=active&limit=100",
-            headers=snap["headers"],
-        ).get("markets", [])
-        for r in rows:
-            rid = r.get("id")
-            if rid and rid not in seen:
-                seen.add(rid)
-                mk.append(r)
+    mk = native_fetch_markets()
     t_markets_ms = int((time.time() - t_mk0) * 1000)
 
     m, sel_stats = select_candidate_market(mk, state, snap)
@@ -681,7 +625,7 @@ def run_cycle(state, exec_adapter):
         return state
 
     t_ctx0 = time.time()
-    ctx = http_json(f"{API}/context/{m_id}", headers=snap["headers"])
+    ctx = native_fetch_context(m_id)
     t_context_ms = int((time.time() - t_ctx0) * 1000)
     warnings = ctx.get("warnings") or []
 
