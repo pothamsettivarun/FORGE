@@ -14,7 +14,7 @@ from core.barrier_fw import run_barrier_fw
 from core.stopping import should_execute
 from core.execution import ExecutionAdapter, IdempotencyStore, reconcile_fill
 from risk.limits import RiskConfig, risk_check
-from core.compat import get_snapshot as native_get_snapshot, fetch_markets as native_fetch_markets, fetch_context as native_fetch_context
+from native.core.compat import get_snapshot as native_get_snapshot, fetch_markets as native_fetch_markets, fetch_context as native_fetch_context
 
 SIM_START_BAL = 10000.0
 MAX_TRADE = 100.0
