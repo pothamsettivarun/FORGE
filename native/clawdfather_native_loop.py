@@ -422,7 +422,7 @@ def size_order(signal, secs_left, snapshot):
 def should_execute_projection_proxy(signal, warnings, price):
     if signal.get("side") not in ("yes", "no"):
         return False, f"signal={signal.get('reason')}"
-    if float(signal.get("confidence", 0.0)) < 0.42:
+    if float(signal.get("confidence", 0.0)) < PROXY_CONF_THRESHOLD:
         return False, "low_confidence"
     if price < 0.08 or price > 0.92:
         return False, "extreme_price"
