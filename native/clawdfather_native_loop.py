@@ -67,7 +67,7 @@ CADENCE_DAY_END_UTC_HOUR = int(os.getenv("CADENCE_DAY_END_UTC_HOUR", "23"))
 
 # A(t)-style spread/edge gate (hard pre-trade filter)
 ENABLE_SPREAD_GATE = os.getenv("ENABLE_SPREAD_GATE", "1") == "1"
-SPREAD_EPSILON = float(os.getenv("SPREAD_EPSILON", "0.03"))
+SPREAD_EPSILON = float(os.getenv("SPREAD_EPSILON", "0.02"))
 
 # Adaptive spread-epsilon controls (self-tighten when execution quality degrades)
 ADAPTIVE_SPREAD_EPSILON = os.getenv("ADAPTIVE_SPREAD_EPSILON", "1") == "1"
