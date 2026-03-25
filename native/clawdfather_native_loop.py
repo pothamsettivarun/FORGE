@@ -37,6 +37,11 @@ FEE_EST = 0.003
 SLIPPAGE_EST = 0.006
 RISK_BUFFER_EST = 0.004
 
+# Native research toggles for signal strictness (keep original defaults unless overridden)
+SIGNAL_MAX_VOL = float(os.getenv("SIGNAL_MAX_VOL", "0.18"))
+SIGNAL_MIN_STRENGTH = float(os.getenv("SIGNAL_MIN_STRENGTH", "0.11"))
+PROXY_CONF_THRESHOLD = float(os.getenv("PROXY_CONF_THRESHOLD", "0.42"))
+
 # Phase-E risk limits
 RISK_CFG = RiskConfig(
     max_position_per_market=400.0,
@@ -361,7 +366,7 @@ def build_signal(symbol):
         score -= 2
 
     strength = abs(r3) + abs(r5)
-    if vol > 0.18 or strength < 0.11:
+    if vol > SIGNAL_MAX_VOL or strength < SIGNAL_MIN_STRENGTH:
         return {
             "side": None,
             "confidence": 0.0,
