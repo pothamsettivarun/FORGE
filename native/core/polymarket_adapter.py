@@ -150,11 +150,20 @@ def get_context(market_id: str) -> dict:
 
 
 def get_native_snapshot() -> dict:
-    # Initial paper-mode shim for clawdfather-native branch.
+    # Paper-mode compatibility shape mirroring the legacy Simmer snapshot contract.
+    balance = 10000.0
+    positions = []
+    positions_value = 0.0
+    me = {"balance": balance}
+    pos = {"positions": positions, "total_value": positions_value}
     return {
-        "equity": 10000.0,
-        "positions": [],
         "headers": {},
+        "me": me,
+        "pos": pos,
+        "balance": balance,
+        "positions": positions,
+        "positions_value": positions_value,
+        "equity": balance + positions_value,
         "t_me_ms": 0,
         "t_pos_ms": 0,
         "ts": int(time.time()),
